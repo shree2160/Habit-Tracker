@@ -5,23 +5,30 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement,
+  LineElement,
   Title,
   Tooltip,
   Legend,
+  Filler
 } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement,
+  LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 const ActivityChart = ({ days = 7 }) => {
   const [chartData, setChartData] = useState(null);
+  const [lineData, setLineData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,13 +53,15 @@ const ActivityChart = ({ days = 7 }) => {
         return data?.filter(log => log.date === date).length || 0;
       });
 
+      const labels = dates.map(d => {
+        const dateObj = new Date(d);
+        return days > 7 
+          ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+      });
+
       setChartData({
-        labels: dates.map(d => {
-          const dateObj = new Date(d);
-          return days > 7 
-            ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            : dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-        }),
+        labels,
         datasets: [
           {
             label: 'Completed Habits',
@@ -62,13 +71,30 @@ const ActivityChart = ({ days = 7 }) => {
           },
         ],
       });
+
+      setLineData({
+        labels,
+        datasets: [
+          {
+            label: 'Trend',
+            data: counts,
+            borderColor: '#22C55E',
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: days > 7 ? 0 : 4,
+            pointHoverRadius: 6,
+          },
+        ],
+      });
+
       setLoading(false);
     };
 
     fetchActivity();
   }, [days]);
 
-  const options = {
+  const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -94,11 +120,18 @@ const ActivityChart = ({ days = 7 }) => {
     }
   };
 
-  if (loading) return <p>Loading chart...</p>;
+  if (loading) return <p>Loading charts...</p>;
 
   return (
-    <div style={{ height: '200px', width: '100%' }}>
-      <Bar options={options} data={chartData} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div style={{ height: '180px', width: '100%' }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Daily Activity</p>
+        <Bar options={commonOptions} data={chartData} />
+      </div>
+      <div style={{ height: '180px', width: '100%' }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Consistency Trend</p>
+        <Line options={commonOptions} data={lineData} />
+      </div>
     </div>
   );
 };
